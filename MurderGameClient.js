@@ -1,8 +1,8 @@
 (function () {
-    var UPDATE_MS = 1000/30;
+    var UPDATE_MS = 20;
     var reset = false;
     var RESET_TIME = 1000;     
-    var LOCATION_ROOT_URL ="https://bas-skyspace.ams3.digitaloceanspaces.com/MurderGame/";     
+    var LOCATION_ROOT_URL ="http://192.168.2.200/Murdergame/";     
     var myID;  
     var myName;      
     var shootSound;
@@ -44,14 +44,14 @@
         myID = entityID; 
         myName = Entities.getEntityProperties(myID,"name").name; 
         myPosition = Entities.getEntityProperties(myID,"position").position;        
-        shootSound = SoundCache.getSound("https://bas-skyspace.ams3.digitaloceanspaces.com/MurderGame/GUN-SHOT2.raw");
-        music = SoundCache.getSound("https://bas-skyspace.ams3.digitaloceanspaces.com/MurderGame/435370__dekstromoramid__thriller-documentary-pack-1.wav");
-        teleportSound = SoundCache.getSound("https://bas-skyspace.ams3.digitaloceanspaces.com/MurderGame/55853__sergenious__teleport.wav");        
-        tadaSound = SoundCache.getSound("https://bas-skyspace.ams3.digitaloceanspaces.com/MurderGame/60445__jobro__tada3.wav");
-        clickSound = SoundCache.getSound("https://bas-skyspace.ams3.digitaloceanspaces.com/MurderGame/448086__breviceps__normal-click.wav"); 
-        dieSound = SoundCache.getSound("https://bas-skyspace.ams3.digitaloceanspaces.com/MurderGame/345450__artmasterrich__male-death-03.wav");
-        deniedSound = SoundCache.getSound("https://bas-skyspace.ams3.digitaloceanspaces.com/MurderGame/419023__jacco18__acess-denied-buzz.mp3");
-        swooshSound = SoundCache.getSound("https://bas-skyspace.ams3.digitaloceanspaces.com/MurderGame/419341__wizardoz__swoosh.wav");    
+        shootSound = SoundCache.getSound(LOCATION_ROOT_URL + "GUN-SHOT2.raw");
+        music = SoundCache.getSound(LOCATION_ROOT_URL + "435370__dekstromoramid__thriller-documentary-pack-1.wav");
+        teleportSound = SoundCache.getSound(LOCATION_ROOT_URL + "55853__sergenious__teleport.wav");        
+        tadaSound = SoundCache.getSound(LOCATION_ROOT_URL + "60445__jobro__tada3.wav");
+        clickSound = SoundCache.getSound(LOCATION_ROOT_URL + "448086__breviceps__normal-click.wav"); 
+        dieSound = SoundCache.getSound(LOCATION_ROOT_URL + "345450__artmasterrich__male-death-03.wav");
+        deniedSound = SoundCache.getSound(LOCATION_ROOT_URL + "419023__jacco18__acess-denied-buzz.mp3");
+        swooshSound = SoundCache.getSound(LOCATION_ROOT_URL + "419341__wizardoz__swoosh.wav");    
     };
 
     this.unload = function (id) {
@@ -89,8 +89,8 @@
         print("RIGHT_HAND_INDEX "+ RIGHT_HAND_INDEX);
         var localRot = generateQuatFromDegreesViaRadians (71.87 , 92 , -16.92);
         if (gun === "Gun") {            
-            var SCRIPT_URL = LOCATION_ROOT_URL + "MurderGameGun-sky.js?"+ Date.now();
-            var MODEL_URL = "https://bas-skyspace.ams3.digitaloceanspaces.com/MurderGame/gun.fbx";
+            var SCRIPT_URL = LOCATION_ROOT_URL + "MurderGameGun.js?"+ Date.now();
+            var MODEL_URL = LOCATION_ROOT_URL + "gun.fbx";
             var gunID = Entities.addEntity( {
                 type: "Model",
                 name: "MurderGameGun",
@@ -100,8 +100,7 @@
                 localPosition: { x: 0.0179, y: 0.1467, z: 0.0305 },
                 localRotation: localRot,
                 localDimensions: { x: 0.0323, y: 0.1487, z: 0.2328 },
-                script: SCRIPT_URL,
-                serverScripts: "http://192.168.2.200/MurderGame/sky/empty.js",              
+                script: SCRIPT_URL,                
                 color: { red: 200, green: 0, blue: 20 }, 
                 collisionless: true,               
                 dynamic: false,                
@@ -158,7 +157,7 @@
         injector.stop();
         isGunCreated = false;
         isKnifeCreated = false;
-        var homePosition = Vec3.sum(myPosition, { x: 5, y: 0, z: Math.random()*5 });
+        var homePosition = Vec3.sum(myPosition, { x: 5, y: 0, z: Math.random() * 5 });
         var newOrientation = Quat.lookAtSimple(homePosition,myPosition);        
         MyAvatar.position = homePosition;
         MyAvatar.orientation = newOrientation;
@@ -207,7 +206,8 @@
             var cameraPos = Camera.position;
             var newNotificationPosition = Vec3.sum(cameraPos,Vec3.multiplyQbyV(Camera.orientation, { x: 0, y: 0.2, z: -2 }));
             print("newNotificationPosition"+JSON.stringify(newNotificationPosition));
-            var newLocalNotificationPosition = Entities.worldToLocalPosition( newNotificationPosition, Camera.cameraEntity);                
+            var newLocalNotificationPosition =
+                Entities.worldToLocalPosition( newNotificationPosition, Camera.cameraEntity);                
             Entities.addEntity( {
                 type: "Text",
                 parentID: Camera.cameraEntity,                
@@ -235,13 +235,13 @@
         var localRot = generateQuatFromDegreesViaRadians (176 , -177 , 36);
         var knifeID = Entities.addEntity( {
             type: "Model",
-            modelURL: "https://bas-skyspace.ams3.digitaloceanspaces.com/MurderGame/Knive3.fbx",
+            modelURL: LOCATION_ROOT_URL + "Knive3.fbx",
             shapeType: "simple-hull",            
             collidesWith: "static,dynamic,kinematic,otherAvatar",                  
             name: "MurderGameWeapon",
             parentID: MyAvatar.sessionUUID,
             parentJointIndex: RIGH_HAND_INDEX,
-            script: LOCATION_ROOT_URL + "MurderGameWeapon-sky.js?"+ Date.now(),           
+            script: LOCATION_ROOT_URL + "MurderGameWeapon.js?"+ Date.now(),           
             localDimensions: { x: 0.65, y: 0.15, z: 0.05 },    
             localPosition: { x: 0.174, y: 0.197, z: 0.022 }, 
             localRotation: localRot,                            
@@ -428,7 +428,7 @@
             "alphaStart": 0,
             "alphaFinish": 0,
             "additiveBlending": true,
-            "textures": "https://bas-skyspace.ams3.digitaloceanspaces.com/MurderGame/star.png"
+            "textures": LOCATION_ROOT_URL + "star.png"
         },"avatar");
 
         Script.setTimeout(function() {

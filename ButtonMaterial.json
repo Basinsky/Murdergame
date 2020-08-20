@@ -1,0 +1,21 @@
+{   
+    "materialVersion": 1,
+    "materials": [
+        {
+            "name":"myMaterial",
+            "model":"hifi_pbr",                                   
+            "albedo":[0,0,1],        
+            "albedoMap":null,            
+            "metallic": null,
+            "metallicMap":null,
+            "roughness": null,
+            "roughnessMap":null,
+            "emissive":[0,0,1],
+            "emissiveMap":null,
+            "opacity": 0.5,
+            "opacityMap":null,                              
+            "normalMap":null,
+            "materialMappingScale":null
+        }
+    ]   
+} 

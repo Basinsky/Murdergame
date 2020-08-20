@@ -1,11 +1,11 @@
 (function () {         
     var findMurderConsoleID;
     var myID;
-    var myName;
-    var data = "";         
+    var myName;             
     var SEARCH_RADIUS = 1000;   
     var SEARCH_POSITION = { x: 0, y: 0, z: 0};
     var RESET_TIME_MS = 1000;
+    var WAIT_TIME_MS = 200;
     var isMurderConsoleFound = false;   
     var reset = true; 
     var materialID;   
@@ -59,7 +59,7 @@
             );            
             Script.setTimeout(function () {         
                 Entities.editEntity(materialID,{priority: 0});        
-            }, 200);
+            }, WAIT_TIME_MS);
         }                
     }
    

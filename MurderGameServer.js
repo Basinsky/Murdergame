@@ -14,7 +14,7 @@
     var GET_READY_DURATION = 1000; // miliseconds  
     var startPlay = false;
     var isGameFinished = false;    
-    var LOCATION_ROOT_URL ="https://bas-skyspace.ams3.digitaloceanspaces.com/MurderGame/";   
+    var LOCATION_ROOT_URL ="http://192.168.2.200/Murdergame/";    
     var timer;
     var myID;      
     var myPosition;   
@@ -22,8 +22,8 @@
     var murderRightSignID;
     var foundMurderBuildingID;       
     var playerData = {"players": [
-         //{"id": Uuid.NULL ,"name": "DUMMY1" ,"role": "Bystander", "clues": "0", "bullets": TOTAL_BULLETS, "gunID": Uuid.NULL, "knifeID": Uuid.NULL, "status": "Alive" },
-         //{"id": Uuid.NULL ,"name": "BAS2" ,"role": "Bystander", "clues": "0", "bullets": TOTAL_BULLETS, "gunID": Uuid.NULL, "knifeID": Uuid.NULL, "status": "Alive" }      
+        {"id": Uuid.NULL ,"name": "DUMMY1" ,"role": "Bystander", "clues": "0", "bullets": TOTAL_BULLETS, "gunID": Uuid.NULL, "knifeID": Uuid.NULL, "status": "Alive" },
+        {"id": Uuid.NULL ,"name": "BAS2" ,"role": "Bystander", "clues": "0", "bullets": TOTAL_BULLETS, "gunID": Uuid.NULL, "knifeID": Uuid.NULL, "status": "Alive" }      
     ]}; 
     var playersMerged = "";    
     var spawnPointIDs = [];
@@ -49,7 +49,7 @@
     this.preload = function (entityID) {       
         myID = entityID;
         myPosition = Entities.getEntityProperties(myID,"position").position;              
-        Entities.editEntity(myID,{ script: LOCATION_ROOT_URL + "MurderGameClient-sky.js?" + Date.now()});        
+        Entities.editEntity(myID,{ script: LOCATION_ROOT_URL + "MurderGameClient.js?" + Date.now()});        
         deleteExistingItems();                      
     };   
     
@@ -540,10 +540,10 @@
                     var clueID = Entities.addEntity( {
                         type: "Model",
                         unlit: true,
-                        modelURL: "https://bas-skyspace.ams3.digitaloceanspaces.com/MurderGame/Clue.fbx",                  
+                        modelURL: LOCATION_ROOT_URL + "Clue.fbx",                  
                         name: "MurderGameClue" + k,                    
                         parentID: foundMurderBuildingID,
-                        script: LOCATION_ROOT_URL + "MurderGameClue-sky.js?"+ Date.now(),               
+                        script: LOCATION_ROOT_URL + "MurderGameClue.js?"+ Date.now(),               
                         localDimensions: { x: 0.3, y: 0.01, z: 0.5 },                    
                         localPosition: Vec3.sum(currentItemPosition, { x: 0, y: -0.2, z: 0 }),
                         localRotation: localRot,
@@ -585,10 +585,10 @@
                 var knifeID = Entities.addEntity( {
                     type: "Model",
                     unlit: true,                    
-                    modelURL: "https://bas-skyspace.ams3.digitaloceanspaces.com/MurderGame/Knive3.fbx",                                      
+                    modelURL: LOCATION_ROOT_URL + "Knive3.fbx",                                      
                     name: "MurderGameKnife" + m,
                     parentID: foundMurderBuildingID,
-                    script: LOCATION_ROOT_URL + "MurderGameKnife-sky.js?"+ Date.now(),                  
+                    script: LOCATION_ROOT_URL + "MurderGameKnife.js?"+ Date.now(),                  
                     localDimensions: { x: 0.65, y: 0.15, z: 0.05 },    
                     localPosition: currentItemPosition,                            
                     lifetime: -1,                   
@@ -627,7 +627,7 @@
             localRotation: localRot5,                    
             dimensions: { x: 1.5, y: 2.4, z: 0.4 },            
             parentID: foundMurderBuildingID,
-            script: LOCATION_ROOT_URL + "MurderGameTeleport-sky.js?"+ Date.now(),       
+            script: LOCATION_ROOT_URL + "MurderGameTeleport.js?"+ Date.now(),       
             visible: true, 
             collisionless: true,        
             color: { r: 0, g: 0, b: 255 },                     
@@ -664,7 +664,7 @@
             localRotation: localRot5,                    
             dimensions: { x: 1.5, y: 2.4, z: 0.4 },            
             parentID: foundMurderBuildingID,
-            script: LOCATION_ROOT_URL + "MurderGameTeleport-sky.js?"+ Date.now(),       
+            script: LOCATION_ROOT_URL + "MurderGameTeleport.js?"+ Date.now(),       
             visible: true, 
             collisionless: true,        
             color: { r: 0, g: 0, b: 255 },                     
@@ -701,7 +701,7 @@
             localRotation: localRot5,                    
             dimensions: { x: 1.5, y: 2.4, z: 0.4 },            
             parentID: foundMurderBuildingID,
-            script: LOCATION_ROOT_URL + "MurderGameTeleport-sky.js?"+ Date.now(),       
+            script: LOCATION_ROOT_URL + "MurderGameTeleport.js?"+ Date.now(),       
             visible: true, 
             collisionless: true,        
             color: { r: 255, g: 255, b: 0 },                     
@@ -738,7 +738,7 @@
             localRotation: localRot5,                    
             dimensions: { x: 1.5, y: 2.4, z: 0.4 },            
             parentID: foundMurderBuildingID,
-            script: LOCATION_ROOT_URL + "MurderGameTeleport-sky.js?"+ Date.now(),       
+            script: LOCATION_ROOT_URL + "MurderGameTeleport.js?"+ Date.now(),       
             visible: true, 
             collisionless: true,        
             color: { r: 255, g: 255, b: 0 },                     
@@ -994,7 +994,8 @@
     function murdererIsKilled(murderName) {
         print("loser = :"+murderName); 
         print(murderName);        
-        Entities.editEntity(murderRightSignID,{text: "THE WORLD IS SAVED!:\n" + murderName + "WAS KILLED\n" + "AND LOSES THE GAME\n" + "OTHER PLAYERS WIN\n" });
+        Entities.editEntity(murderRightSignID,
+            {text: "THE WORLD IS SAVED!:\n" + murderName + "WAS KILLED\n" + "AND LOSES THE GAME\n" + "OTHER PLAYERS WIN\n" });
         for (var j = 0; j < playerData.players.length; j++) {            
             if (playerData.players[j].status === "Alive") {
                 Entities.callEntityClientMethod(playerData.players[j].id,              

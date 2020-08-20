@@ -10,7 +10,7 @@ var isVisible = false;
 
 function placeItemCube() {    
     var itemCubeID = Entities.addEntity( {
-        type: "Box",
+        type: "Shape",
         shape: "Dodecahedron",
         name: "MurderItemCube",        
         position: Vec3.sum(MyAvatar.position, Vec3.multiplyQbyV(MyAvatar.orientation, { x: 0, y: 0, z: -2 })),           
@@ -27,7 +27,7 @@ function placeItemCube() {
 
 function placeSpawnCube() {    
     var spawnCubeID = Entities.addEntity( {
-        type: "Box",
+        type: "Shape",
         shape: "Dodecahedron",
         name: "MurderSpawnCube",       
         position: Vec3.sum(MyAvatar.position, Vec3.multiplyQbyV(MyAvatar.orientation, { x: 0, y: 0, z: -2 })),           

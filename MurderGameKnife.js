@@ -1,8 +1,7 @@
 (function () {         
     var findMurderConsoleID;
     var myID;
-    var myName;
-    var data = "";         
+    var myName;           
     var SEARCH_RADIUS = 1000;   
     var SEARCH_POSITION = { x: 0, y: 0, z: 0};
     var RESET_TIME_MS = 500;
