@@ -9,37 +9,37 @@ var props;
 var isVisible = false;
 
 function placeItemCube() {    
-    var itemCubeID = Entities.addEntity( {
+    Entities.addEntity({
         type: "Shape",
-        shape: "Dodecahedron",
+        shape: "Cube",
         name: "MurderItemCube",        
         position: Vec3.sum(MyAvatar.position, Vec3.multiplyQbyV(MyAvatar.orientation, { x: 0, y: 0, z: -2 })),           
         visible: true, 
-        collisionless: true,        
+        //collisionless: true,        
         color: { r: 0, g: 255, b: 0 },
         dimensions: { x: 0.2 , y: 0.2 , z: 0.2},            
         lifetime: -1,            
         userData: JSON.stringify({
             grabbableKey: { grabbable: true, triggerable: false }
-        } )                          
-    },"domain");  
+        })                          
+    });  
 }
 
 function placeSpawnCube() {    
-    var spawnCubeID = Entities.addEntity( {
+    Entities.addEntity({
         type: "Shape",
-        shape: "Dodecahedron",
+        shape: "Cube",
         name: "MurderSpawnCube",       
         position: Vec3.sum(MyAvatar.position, Vec3.multiplyQbyV(MyAvatar.orientation, { x: 0, y: 0, z: -2 })),           
         visible: true, 
-        collisionless: true,        
+        //collisionless: true,        
         color: { r: 0, g: 0, b: 255 },
         dimensions: { x: 0.3 , y: 0.3 , z: 0.3},            
         lifetime: -1,            
         userData: JSON.stringify({
             grabbableKey: { grabbable: true, triggerable: false }
-        } )                          
-    },"domain");  
+        })                          
+    });  
 }
 
 

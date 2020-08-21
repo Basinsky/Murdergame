@@ -6,6 +6,7 @@
     var SEARCH_RADIUS = 1000;
     var SEARCH_POSITION = { x: 0, y: 0, z: 0};
     var TOTAL_CLUES = 10;
+    var CLUES_NEEDED_FOR_GUN = 5;
     var TOTAL_KNIVES = 10;
     var TOTAL_BULLETS =10;
     var RESET_TIME_MS = 1000;
@@ -21,10 +22,7 @@
     var murderLeftSignID;
     var murderRightSignID;
     var foundMurderBuildingID;       
-    var playerData = {"players": [
-        {"id": Uuid.NULL ,"name": "DUMMY1" ,"role": "Bystander", "clues": "0", "bullets": TOTAL_BULLETS, "gunID": Uuid.NULL, "knifeID": Uuid.NULL, "status": "Alive" },
-        {"id": Uuid.NULL ,"name": "BAS2" ,"role": "Bystander", "clues": "0", "bullets": TOTAL_BULLETS, "gunID": Uuid.NULL, "knifeID": Uuid.NULL, "status": "Alive" }      
-    ]}; 
+    var playerData = {"players": []}; 
     var playersMerged = "";    
     var spawnPointIDs = [];
     var spawnPointPositions = [];
@@ -137,7 +135,7 @@
                                     playerData.players[i].clues.push(itemName);
                                     print("player: " + playerID + " added " + itemName);
                                     print(JSON.stringify(playerData.players[i].clues));
-                                    var message = "Clues: " + playerData.players[i].clues.length +"/" + TOTAL_CLUES;
+                                    var message = "Clues: " + playerData.players[i].clues.length +"/" + CLUES_NEEDED_FOR_GUN;
                                     var duration = 2;
                                     playSoundEffect(playerData.players[i].id,"tada"); 
                                     Entities.callEntityClientMethod(playerData.players[i].id,              
@@ -153,13 +151,19 @@
                                         ["Allready found this", 0.5]
                                     ); 
                                 }
-                                if (playerData.players[i].clues.length === TOTAL_CLUES) {                                    
+                                if (playerData.players[i].clues.length === CLUES_NEEDED_FOR_GUN) {
+                                    playerData.players[i].role = "Hero";                                    
                                     Entities.callEntityClientMethod(playerData.players[i].id,              
                                         myID, 
                                         "giveObject",
                                         ["Gun"]
                                     );
-                                    playerData.players[i].role = "Hero";
+                                    Entities.callEntityClientMethod(playerData.players[i].id,              
+                                        myID, 
+                                        "notifications",
+                                        ["Hero", 2]
+                                    ); 
+                                    
                                     print (JSON.stringify(playerData.players[i]));          
                                 }
                             } else {
@@ -222,7 +226,12 @@
                                     itemID, 
                                     "removeGun",
                                     ["Allowed"]
-                                );                            
+                                );
+                                Entities.callEntityClientMethod(playerData.players[i].id,              
+                                    myID, 
+                                    "resetGun",
+                                    ["Allowed"]
+                                );                                
 
                             } else {
                                 Entities.callEntityClientMethod(playerData.players[i].id,              
@@ -355,15 +364,15 @@
 
     // get knife ID from client script
     this.receiveKnife = function(id,param) {       
-        var playerID5 = Uuid.fromString(param[0]);
-        var itemID5 = Uuid.fromString(param[1]);
-        var itemName5 = param[2];
-        var data5 = param[3]; // string
+        var playerIDS = Uuid.fromString(param[0]);
+        var itemIDS = Uuid.fromString(param[1]);
+        var itemNames = param[2];
+        var datas = param[3]; // string
 
-        print("received from " + itemName5 + "with id " + itemID5 + "the playerID" + playerID5 + "data" + JSON.stringify(data5));
+        print("received from " + itemNames + "with id " + itemIDS + "the playerID" + playerIDS + "data" + JSON.stringify(datas));
         for (var i = 0; i < playerData.players.length; i++) {
-            if (playerData.players[i].id === playerID5) {
-                playerData.players[i].knifeID = Uuid.fromString(data5);
+            if (playerData.players[i].id === playerIDS) {
+                playerData.players[i].knifeID = Uuid.fromString(datas);
             }   
         }                        
     };
@@ -474,6 +483,7 @@
     }
 
     function getSpawnPoints() {
+        print("getting spawnpoints");
         spawnPointIDs = [];
         var entities = Entities.findEntities(myPosition, SEARCH_RADIUS);
         for (var i in entities) {
@@ -484,6 +494,7 @@
                 spawnPointIDs.push(props.id);                                                    
             }
         }
+        print("found " + spawnPointIDs.length + "spawnpoints");
     }
 
     function playSoundEffect(id,soundname) {
@@ -495,6 +506,7 @@
     }
 
     function getItemPoints() {
+        print("getting itempoints");
         itemPointIDs = [];
         var entities = Entities.findEntities(myPosition, SEARCH_RADIUS);
         for (var i in entities) {
@@ -504,6 +516,7 @@
                 itemPointIDs.push(props.id);                                                 
             }
         }
+        print("found " + itemPointIDs.length + "itempoints");
     }
 
     function createRoles() {
@@ -523,98 +536,94 @@
     }
 
     function createSpawnLocations() {
+        print("setting spawn point positions");
         for (var p = 0; p < playerData.players.length; p++) {
             var q = Math.floor(Math.random() * spawnPointPositions.length);
             playerStartPositions[p] = spawnPointPositions [q];     
-        }        
+        }
+        print("spawn point positions" + JSON.stringify(playerStartPositions));        
     }
 
     function spawnClues() {
         var localRot = generateQuatFromDegreesViaRadians (90 , 0 , 0);
-        var localRot3 = generateQuatFromDegreesViaRadians (0 , 180 , 0);
-        if (foundMurderBuildingID) { 
-            if (TOTAL_CLUES + TOTAL_KNIVES < itemPointIDs.length) {      
-                for (var k = 0; k < TOTAL_CLUES; k++) {
-                    var l = Math.floor(Math.random() * itemPointIDs.length);                         
-                    var currentItemPosition = Entities.getEntityProperties(itemPointIDs[l],["localPosition"]).localPosition;
-                    var clueID = Entities.addEntity( {
-                        type: "Model",
-                        unlit: true,
-                        modelURL: LOCATION_ROOT_URL + "Clue.fbx",                  
-                        name: "MurderGameClue" + k,                    
-                        parentID: foundMurderBuildingID,
-                        script: LOCATION_ROOT_URL + "MurderGameClue.js?"+ Date.now(),               
-                        localDimensions: { x: 0.3, y: 0.01, z: 0.5 },                    
-                        localPosition: Vec3.sum(currentItemPosition, { x: 0, y: -0.2, z: 0 }),
-                        localRotation: localRot,
-                        angularDamping: 0,
-                        localAngularVelocity: { x: 0, y: 1, z: 0},                           
-                        lifetime: -1,          
-                        userData: "{ \"grabbableKey\": { \"grabbable\": false, \"triggerable\": true}}"
-                    });
-                    Entities.addEntity({
-                        name: "MurderGameLightClue",
-                        type: "Light",
-                        parentID: clueID,
-                        localPosition: { x: 0, y: 0, z: -1.2 },
-                        localRotation: localRot3,                    
-                        dimensions: { x: 5, y: 5, z: 5 },
-                        color: { r: 0, g: 0, b: 255 },
-                        intensity: 20,
-                        falloffRadius: 100,
-                        isSpotlight: true,
-                        exponent: 50,
-                        cutoff: 30,
-                        lifetime: -1
-                    });       
-                    clueIDs.push(clueID);
-                    itemPointIDs.splice(l,1);
-                }
-            } else {
-                print("Not enough item Spawn Points!");
-            }
-        }
-    }
-
-    function spawnKnives() {
-        if (foundMurderBuildingID) {  
-            var localRot2 = generateQuatFromDegreesViaRadians (-90 , 0 , 0);
-            for (var m = 0; m < TOTAL_KNIVES; m++) {
-                var n = Math.floor(Math.random() * itemPointIDs.length);                         
-                var currentItemPosition = Entities.getEntityProperties(itemPointIDs[n],["localPosition"]).localPosition;
-                var knifeID = Entities.addEntity( {
+        var localRot3 = generateQuatFromDegreesViaRadians (0 , 180 , 0);        
+        if (TOTAL_CLUES + TOTAL_KNIVES < itemPointIDs.length) {      
+            for (var k = 0; k < TOTAL_CLUES; k++) {
+                var l = Math.floor(Math.random() * itemPointIDs.length);                         
+                var currentItemPosition = Entities.getEntityProperties(itemPointIDs[l],["position"]).position;
+                var clueID = Entities.addEntity( {
                     type: "Model",
-                    unlit: true,                    
-                    modelURL: LOCATION_ROOT_URL + "Knive3.fbx",                                      
-                    name: "MurderGameKnife" + m,
-                    parentID: foundMurderBuildingID,
-                    script: LOCATION_ROOT_URL + "MurderGameKnife.js?"+ Date.now(),                  
-                    localDimensions: { x: 0.65, y: 0.15, z: 0.05 },    
-                    localPosition: currentItemPosition,                            
-                    lifetime: -1,                   
-                    localAngularVelocity: { x: 0, y: 1, z: 0},
-                    angularDamping: 0,          
+                    unlit: true,
+                    modelURL: LOCATION_ROOT_URL + "Clue.fbx",                  
+                    name: "MurderGameClue" + k,                    
+                    script: LOCATION_ROOT_URL + "MurderGameClue.js?"+ Date.now(),               
+                    dimensions: { x: 0.3, y: 0.01, z: 0.5 },                    
+                    position: Vec3.sum(currentItemPosition, { x: 0, y: -0.2, z: 0 }),
+                    rotation: localRot,
+                    angularDamping: 0,
+                    angularVelocity: { x: 0, y: 1, z: 0},                           
+                    lifetime: -1,          
                     userData: "{ \"grabbableKey\": { \"grabbable\": false, \"triggerable\": true}}"
                 });
                 Entities.addEntity({
-                    name: "MurderGameLightKnife",
+                    name: "MurderGameLightClue",
                     type: "Light",
-                    parentID: knifeID,
-                    localPosition: { x: 0, y: 1.2, z: 0 },
-                    localRotation: localRot2,                    
+                    parentID: clueID,
+                    localPosition: { x: 0, y: 0, z: -1.2 },
+                    localRotation: localRot3,                    
                     dimensions: { x: 5, y: 5, z: 5 },
-                    color: { r: 255, g: 0, b: 0 },
+                    color: { r: 0, g: 0, b: 255 },
                     intensity: 20,
                     falloffRadius: 100,
                     isSpotlight: true,
                     exponent: 50,
                     cutoff: 30,
                     lifetime: -1
-                });              
-                knifeIDs.push(knifeID);
-                itemPointIDs.splice(n,1);
-            }            
+                });       
+                clueIDs.push(clueID);
+                itemPointIDs.splice(l,1);
+            }
+        } else {
+            print("Not enough item Spawn Points!");
         }        
+    }
+
+    function spawnKnives() {         
+        var localRot2 = generateQuatFromDegreesViaRadians (-90 , 0 , 0);
+        for (var m = 0; m < TOTAL_KNIVES; m++) {
+            var n = Math.floor(Math.random() * itemPointIDs.length);                         
+            var currentItemPosition = Entities.getEntityProperties(itemPointIDs[n],["position"]).position;
+            var knifeID = Entities.addEntity( {
+                type: "Model",
+                unlit: true,                    
+                modelURL: LOCATION_ROOT_URL + "Knive3.fbx",                                      
+                name: "MurderGameKnife" + m,                
+                script: LOCATION_ROOT_URL + "MurderGameKnife.js?"+ Date.now(),                  
+                dimensions: { x: 0.65, y: 0.15, z: 0.05 },    
+                position: currentItemPosition,                            
+                lifetime: -1,                   
+                angularVelocity: { x: 0, y: 1, z: 0},
+                angularDamping: 0,          
+                userData: "{ \"grabbableKey\": { \"grabbable\": false, \"triggerable\": true}}"
+            });
+            Entities.addEntity({
+                name: "MurderGameLightKnife",
+                type: "Light",
+                parentID: knifeID,
+                localPosition: { x: 0, y: 1.2, z: 0 },
+                localRotation: localRot2,                    
+                dimensions: { x: 5, y: 5, z: 5 },
+                color: { r: 255, g: 0, b: 0 },
+                intensity: 20,
+                falloffRadius: 100,
+                isSpotlight: true,
+                exponent: 50,
+                cutoff: 30,
+                lifetime: -1
+            });              
+            knifeIDs.push(knifeID);
+            itemPointIDs.splice(n,1);
+        }                
     }
 
     function spawnTeleports() {
@@ -623,10 +632,9 @@
             type: "Shape",
             shape: "Cube",
             name: "MurderGameTeleport",
-            localPosition: { x: -7.5, y: -15, z: 11.6 },
-            localRotation: localRot5,                    
-            dimensions: { x: 1.5, y: 2.4, z: 0.4 },            
-            parentID: foundMurderBuildingID,
+            position: { x: -7.5, y: -15, z: 11.6 },
+            rotation: localRot5,                    
+            dimensions: { x: 1.5, y: 2.4, z: 0.4 },
             script: LOCATION_ROOT_URL + "MurderGameTeleport.js?"+ Date.now(),       
             visible: true, 
             collisionless: true,        
@@ -660,10 +668,9 @@
             type: "Shape",
             shape: "Cube",
             name: "MurderGameTeleport",
-            localPosition: { x: -12.2, y: 12, z: -13.3 },
-            localRotation: localRot5,                    
+            position: { x: -12.2, y: 12, z: -13.3 },
+            rotation: localRot5,                    
             dimensions: { x: 1.5, y: 2.4, z: 0.4 },            
-            parentID: foundMurderBuildingID,
             script: LOCATION_ROOT_URL + "MurderGameTeleport.js?"+ Date.now(),       
             visible: true, 
             collisionless: true,        
@@ -697,10 +704,9 @@
             type: "Shape",
             shape: "Cube",
             name: "MurderGameTeleport",
-            localPosition: { x: 12.2, y: 11.8, z: 13.7 },
-            localRotation: localRot5,                    
+            position: { x: 12.2, y: 11.8, z: 13.7 },
+            rotation: localRot5,                    
             dimensions: { x: 1.5, y: 2.4, z: 0.4 },            
-            parentID: foundMurderBuildingID,
             script: LOCATION_ROOT_URL + "MurderGameTeleport.js?"+ Date.now(),       
             visible: true, 
             collisionless: true,        
@@ -734,10 +740,9 @@
             type: "Shape",
             shape: "Cube",
             name: "MurderGameTeleport",
-            localPosition: { x: 13.6, y: -2.1, z: -11.8 },
-            localRotation: localRot5,                    
-            dimensions: { x: 1.5, y: 2.4, z: 0.4 },            
-            parentID: foundMurderBuildingID,
+            position: { x: 13.6, y: -2.1, z: -11.8 },
+            rotation: localRot5,                    
+            dimensions: { x: 1.5, y: 2.4, z: 0.4 },
             script: LOCATION_ROOT_URL + "MurderGameTeleport.js?"+ Date.now(),       
             visible: true, 
             collisionless: true,        
@@ -769,15 +774,13 @@
     }
 
     function telePortToArena() {
-        for (var o = 0; o < playerData.players.length; o++) {                             
-            if (foundMurderBuildingID) {
-                Entities.callEntityClientMethod(playerData.players[o].id,              
-                    myID, 
-                    "teleportMe",
-                    [JSON.stringify(playerStartPositions[o])]
-                );                
-                playSoundEffect(playerData.players[o].id,"teleport");                
-            }    
+        for (var o = 0; o < playerData.players.length; o++) {           
+            Entities.callEntityClientMethod(playerData.players[o].id,              
+                myID, 
+                "teleportMe",
+                [JSON.stringify(playerStartPositions[o])]
+            );                
+            playSoundEffect(playerData.players[o].id,"teleport");                
         }               
     }
 
@@ -786,14 +789,12 @@
         timer = Script.setInterval(function () {
             var message = GET_READY_MESSAGE[counter];
             var duration = GET_READY_DURATION / 1000;
-            for (var o = 0; o < playerData.players.length; o++) {                                                
-                if (foundMurderBuildingID) {               
-                    Entities.callEntityClientMethod(playerData.players[o].id,              
-                        myID, 
-                        "notifications",
-                        [message, duration]
-                    );              
-                }
+            for (var o = 0; o < playerData.players.length; o++) {                            
+                Entities.callEntityClientMethod(playerData.players[o].id,              
+                    myID, 
+                    "notifications",
+                    [message, duration]
+                );                
                 if (counter >= 1) {
                     playSoundEffect(playerData.players[o].id,"click");
                 }     
@@ -811,28 +812,26 @@
     function informPlayersOfRoles() {
         for (var o = 0; o < playerData.players.length; o++) {
             var message = playerData.players[o].role;
-            var duration = JSON.stringify(ROLE_MESSAGE_DURATION);                             
-            if (foundMurderBuildingID) {               
-                Entities.callEntityClientMethod(playerData.players[o].id,              
-                    myID, 
-                    "notifications",
-                    [message, duration]
-                );              
-            }    
+            var duration = JSON.stringify(ROLE_MESSAGE_DURATION);                         
+            Entities.callEntityClientMethod(playerData.players[o].id,              
+                myID, 
+                "notifications",
+                [message, duration]
+            );              
+                
         } 
     }       
 
     function giveGunToHero() {
         for (var o = 0; o < playerData.players.length; o++) {
-            if (playerData.players[o].role === "Hero") {                                        
-                if (foundMurderBuildingID) {
-                    playSoundEffect(playerData.players[o].id,"swoosh");                 
-                    Entities.callEntityClientMethod(playerData.players[o].id,              
-                        myID, 
-                        "giveObject",
-                        ["Gun"]
-                    );              
-                }                
+            if (playerData.players[o].role === "Hero") {                
+                playSoundEffect(playerData.players[o].id,"swoosh");                 
+                Entities.callEntityClientMethod(playerData.players[o].id,              
+                    myID, 
+                    "giveObject",
+                    ["Gun"]
+                );            
+                              
             }
         }
     }

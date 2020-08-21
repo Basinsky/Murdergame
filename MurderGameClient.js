@@ -135,7 +135,7 @@
                     enabled: true
                 });
             }            
-            isGunCreated = true;
+           
             
             // report gunID back to serverscript
             print("sending GunID" + gunID);
@@ -143,7 +143,8 @@
                 myID, 
                 "receiveGun",
                 [MyAvatar.sessionUUID,myID,myName, gunID]
-            );           
+            );
+            isGunCreated = true;           
         }
         gun = "";        
     };   
