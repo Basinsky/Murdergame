@@ -2,7 +2,8 @@
     var UPDATE_MS = 20;
     var reset = false;
     var RESET_TIME = 1000;     
-    var LOCATION_ROOT_URL ="http://192.168.2.200/Murdergame/";     
+    //var LOCATION_ROOT_URL ="http://192.168.2.200/Murdergame/";
+    var LOCATION_ROOT_URL = Script.resolvePath(".");      
     var myID;  
     var myName;      
     var shootSound;
@@ -15,6 +16,7 @@
     var deniedSound;
     var swooshSound;
     var myPosition;
+    var myRotation;
     var PICK_FILTERS = Picks.PICK_ENTITIES | Picks.PICK_AVATARS | Picks.PICK_PRECISE;
     var pickID;
     var knifePickLowID;
@@ -43,7 +45,8 @@
     this.preload = function (entityID) {
         myID = entityID; 
         myName = Entities.getEntityProperties(myID,"name").name; 
-        myPosition = Entities.getEntityProperties(myID,"position").position;        
+        myPosition = Entities.getEntityProperties(myID,"position").position;
+        myRotation = Entities.getEntityProperties(myID,"rotation").rotation;                
         shootSound = SoundCache.getSound(LOCATION_ROOT_URL + "GUN-SHOT2.raw");
         music = SoundCache.getSound(LOCATION_ROOT_URL + "435370__dekstromoramid__thriller-documentary-pack-1.wav");
         teleportSound = SoundCache.getSound(LOCATION_ROOT_URL + "55853__sergenious__teleport.wav");        
@@ -134,9 +137,7 @@
                     filter: PICK_FILTERS,
                     enabled: true
                 });
-            }            
-           
-            
+            }
             // report gunID back to serverscript
             print("sending GunID" + gunID);
             Entities.callEntityServerMethod(                             
@@ -149,30 +150,39 @@
         gun = "";        
     };   
     
-    this.removePlayer = function(id) { 
-        print("rest players are removed");
+    this.removePlayer = function(id) {
+        print("removing player" + id);        
         if (isPointing) {
             MyAvatar.endReaction("point");
             isPointing = false;
-        }        
+            print("stop pointing"); 
+        }
         injector.stop();
         isGunCreated = false;
-        isKnifeCreated = false;
-        var homePosition = Vec3.sum(myPosition, { x: 5, y: 0, z: Math.random() * 5 });
-        var newOrientation = Quat.lookAtSimple(homePosition,myPosition);        
+        isKnifeCreated = false;      
+        var newOrientation = Quat.multiply(Quat.fromPitchYawRollDegrees(0, -90, 0 ),myRotation);  
+        var homePosition = Vec3.sum(myPosition, Vec3.multiplyQbyV(newOrientation, { x: Math.round(Math.random() * 3) -1.5, y: 0, z: -1 }));    
+                   
         MyAvatar.position = homePosition;
         MyAvatar.orientation = newOrientation;
-
+        print("position player" + JSON.stringify(homePosition));
+        print("orientation player" + JSON.stringify(newOrientation));
         var gameObjects = Entities.getChildrenIDs(MyAvatar.sessionUUID);
+        print("gameobjects" + JSON.stringify(gameObjects));
         for (var i in gameObjects) {
             var entityName = Entities.getEntityProperties(gameObjects[i],"name").name;
             if (entityName === "MurderGameWeapon") {
                 Entities.deleteEntity(gameObjects[i]);
+                print("removing object" + gameObjects[i]); 
             }
             if (entityName === "MurderGameGun") {
                 Entities.deleteEntity(gameObjects[i]);
-            }            
+                print("removing object" + gameObjects[i]); 
+            }
+                       
         }
+
+        
     };
 
     this.notifications = function(id,param) {
@@ -440,7 +450,18 @@
     }
 
     function keyPressEvent(event) {   
-        switch (event.text) {        
+        switch (event.text) {
+            case "$":
+                if (reset) {
+                    Entities.callEntityServerMethod(                             
+                        myID, 
+                        "toggleVisibility",
+                        [MyAvatar.sessionUUID,myID,myName,"visible"]
+                    );
+                    reset = false;
+                    print("reset = falsedollar");
+                }                                           
+                break;         
             case "*":
                 if (reset) {
                     Entities.callEntityServerMethod(                             

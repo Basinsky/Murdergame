@@ -10,20 +10,21 @@
     var TOTAL_KNIVES = 10;
     var TOTAL_BULLETS =10;
     var RESET_TIME_MS = 1000;
+    var MAX_SCORE = 20; // for "Kill20" gameMode
     var ROLE_MESSAGE_DURATION = 1; // seconds
     var GET_READY_MESSAGE = ["Get Ready","3","2","1","GO !!"];
     var GET_READY_DURATION = 1000; // miliseconds  
     var startPlay = false;
     var isGameFinished = false;    
-    var LOCATION_ROOT_URL ="http://192.168.2.200/Murdergame/";    
+    //var LOCATION_ROOT_URL = "http://192.168.2.200/Murdergame/";
+    var LOCATION_ROOT_URL = Script.resolvePath(".");   
     var timer;
     var myID;      
     var myPosition;   
     var murderLeftSignID;
-    var murderRightSignID;
-    var foundMurderBuildingID;       
+    var murderRightSignID;           
     var playerData = {"players": []}; 
-    var playersMerged = "";    
+    var playersMerged = "";     
     var spawnPointIDs = [];
     var spawnPointPositions = [];
     var playerStartPositions = [];
@@ -33,26 +34,30 @@
     var isEquipped = false;    
     var reset;
     var roleNumber = 0;
-    var gameModes = ["MurderGame","LastMan"];
+    var gameModes = ["MurderGame","LastMan","Kill20"];
     var gameModeCounter = 1;
-    var gameMode = "MurderGame";   
-    
+    var gameMode = "MurderGame";
+    var rightSign = gameMode;  
+    var isVisible = false;   
 
     this.remotelyCallable = [
         "receiveDataFromItem",
         "receiveGun",
-        "receiveKnife"             
+        "receiveKnife",
+        "toggleVisibility"             
     ]; 
 
     this.preload = function (entityID) {       
         myID = entityID;
         myPosition = Entities.getEntityProperties(myID,"position").position;              
         Entities.editEntity(myID,{ script: LOCATION_ROOT_URL + "MurderGameClient.js?" + Date.now()});        
-        deleteExistingItems();                      
+        deleteExistingItems(); 
+        updateRightSign(); 
+        updateLeftSign();                    
     };   
     
     this.unload = function (entityID) {        
-            
+        deleteExistingItems();    
     };
 
     // main communication between client script and serverscript
@@ -108,11 +113,8 @@
                                         playerData.players[k].status = "Dead";
                                         print("murder me"); 
                                         playSoundEffect(playerData.players[k].id,"die");                              
-                                        Entities.callEntityClientMethod(playerToBeMurdered,              
-                                            myID, 
-                                            "removePlayer",
-                                            ["allowed"] );                                
-                                        updateSign();   
+                                        removePlayer(playerToBeMurdered);                           
+                                        updateLeftSign();   
                                     }                                   
                                 }                                                                                            
                             }
@@ -239,9 +241,7 @@
                                     "notifications",
                                     [bulletMessage, bulletMessageDuration]
                                 );
-                            }
-
-                            
+                            }                            
                             print("itemName " + itemName);
                             playSoundEffect(playerData.players[i].id,"shoot");
                             Entities.callEntityClientMethod(playerID,              
@@ -264,31 +264,39 @@
                                     playerData.players[m].status = "Dead";
                                     playerData.players[i].name = playerData.players[i].name + "(X)";
                                     playerData.players[m].name = playerData.players[m].name + "(X)";
-                                    Entities.callEntityClientMethod(playerToBeShot,              
-                                        myID, 
-                                        "removePlayer",
-                                        ["allowed"] );
-                                    Entities.callEntityClientMethod(playerData.players[i].id,              
-                                        myID, 
-                                        "removePlayer",
-                                        ["allowed"] );                                                                           
+                                    removePlayer(playerToBeShot); 
+                                    removePlayer(playerData.players[i].id);                                                                        
                                 }
                                 // Hero can kill a Hero and Murderer
                                 if (playerData.players[m].role === "Murderer" || playerData.players[m].role === "Hero") {
                                     playerToBeShot = gunHitAvatarID;
                                     playSoundEffect(playerData.players[m].id,"die");                         
                                     print("murder me");
-                                    playerData.players[m].status = "Dead";
-                                    playerData.players[m].name = playerData.players[m].name + "(X)";                                                            
-                                    Entities.callEntityClientMethod(playerToBeShot,              
-                                        myID, 
-                                        "removePlayer",
-                                        ["allowed"] );
+                                    if (gameMode !== "Kill20") {
+                                        playerData.players[m].status = "Dead";
+                                        playerData.players[m].name = playerData.players[m].name + "(X)";                                                            
+                                        removePlayer(playerToBeShot);
+                                    }
+                                    if (gameMode === "Kill20") { 
+                                        playerData.players[i].score = playerData.players[i].score + 1;
+                                        var index = (Math.round(Math.random() * (playerStartPositions.length-1)));
+                                        print("i'm sending this:" + JSON.stringify(playerStartPositions[index]));
+                                        Entities.callEntityClientMethod(playerToBeShot,              
+                                            myID, 
+                                            "teleportMe",
+                                            [JSON.stringify(playerStartPositions[index])]
+                                        );                                        
+                                        var splitNameKiller = playerData.players[i].name.split("-");
+                                        var splitNameVictim = playerData.players[m].name.split("-");
+                                        playerData.players[i].name = splitNameKiller[0] + "-" + playerData.players[i].score; 
+                                        Entities.editEntity(murderRightSignID,{text: splitNameKiller[0] + "\n" + "KILLED\n" + splitNameVictim}); 
+                                    }
+
                                 }
                                 print(JSON.stringify(playerData));                                                                                            
                             }
                         }
-                        updateSign();                                       
+                        updateLeftSign();                                       
                     }
                                                               
                     if (itemName === "MurderConsole") {                
@@ -296,11 +304,8 @@
                             playerData.players[i].status = "Dead";
                             playerData.players[i].name = playerData.players[i].name + "(X)";              
                             print("lets remove player after quiting");                            
-                            updateSign();  
-                            Entities.callEntityClientMethod(playerID,             
-                                myID, 
-                                "removePlayer",
-                                ["allowed"] );                               
+                            updateLeftSign();  
+                            removePlayer(playerID);                              
                         } 
                     }                    
                                  
@@ -344,7 +349,8 @@
         playerID = Uuid.NULL;
         itemID = Uuid.NULL;
         itemName = "";
-        data = ""; // string       
+        data = ""; // string 
+              
     };
     
     // get gun ID from client script
@@ -377,6 +383,22 @@
         }                        
     };
 
+    this.toggleVisibility = function() {   
+        var entities = Entities.findEntities({x: 0, y: 0, z: 0}, 10000);
+        isVisible = !isVisible;
+        for (var i in entities) {        
+            var props = Entities.getEntityProperties(entities[i]);
+            var slicedItemName = props.name.slice(0,14);                          
+            if (slicedItemName === "MurderItemCube") {            
+                Entities.editEntity(props.id, {visible: isVisible });                    
+            }
+            var slicedSpawnName = props.name.slice(0,15);                          
+            if (slicedSpawnName === "MurderSpawnCube") {            
+                Entities.editEntity(props.id, {visible: isVisible });                    
+            }
+        }
+    };
+
     // handle registration
     function updatePlayerList(candidateID,candidateName) {  
         if (startPlay === false) {          
@@ -389,11 +411,20 @@
             }
             if (!isRemoved) {
                 print("add to  playerlist");            
-                playerData.players.push({"id": candidateID ,"name": candidateName ,"role": "Bystander", "clues": [], "bullets": TOTAL_BULLETS,"gunID": Uuid.NULL , "knifeID": Uuid.NULL, "status": "Alive" });           
+                playerData.players.push({"id": candidateID ,"name": candidateName ,"role": "Bystander", "clues": [], "bullets": TOTAL_BULLETS,"gunID": Uuid.NULL , "knifeID": Uuid.NULL, "status": "Alive" , "score": 0 });           
             }
-            updateSign();            
+            updateLeftSign();            
         }  
     }
+
+    function removePlayer(playerToBeRemoved) {
+        Entities.callEntityClientMethod(playerToBeRemoved,              
+            myID, 
+            "removePlayer",
+            ["allowed"]
+        );                
+    }
+
     // randomize playerlist
     function shuffle(playerObject) {
         var currentIndex = playerObject.players.length, temporaryValue, randomIndex;    
@@ -418,7 +449,7 @@
         return newRotation;
     }
 
-    function updateSign() {
+    function updateLeftSign() {
         playersMerged = "Players (" + playerData.players.length + "/" + PLAYERS_MAX + ")" + "\n";        
         if (playerData.players.length === 0) {           
             Entities.editEntity(murderLeftSignID, { text: playersMerged});           
@@ -426,20 +457,20 @@
             for (var i = 0; i < playerData.players.length; i++) {       
                 playersMerged = playersMerged + (i+1) +".  " + playerData.players[i].name +"\n";            
             }   
-            Entities.editEntity(murderLeftSignID, { text: playersMerged});
-            var resetTextRight = "GameMode:" + "\n" + gameMode; 
-            Entities.editEntity(murderRightSignID, { text: resetTextRight});
+            Entities.editEntity(murderLeftSignID, { text: playersMerged});            
             playersMerged = "";   
         }       
+    } 
+    
+    function updateRightSign() {       
+        var resetTextRight = "GameMode:" + "\n" + gameMode; 
+        Entities.editEntity(murderRightSignID, { text: resetTextRight});             
     }   
 
     function findID() {       
         var entities = Entities.findEntities(SEARCH_POSITION, SEARCH_RADIUS);
         for (var i = 0; i < entities.length; i++) {
-            var props = Entities.getEntityProperties(entities[i]);                            
-            if (props.name === "MurderBuilding") {
-                foundMurderBuildingID = props.id;                                               
-            }            
+            var props = Entities.getEntityProperties(entities[i]);                     
             if (props.name === "MurderLeftSign") {
                 murderLeftSignID = props.id;                                                  
             }
@@ -488,6 +519,7 @@
         var entities = Entities.findEntities(myPosition, SEARCH_RADIUS);
         for (var i in entities) {
             var props = Entities.getEntityProperties(entities[i]);
+            //print(props.name);
             var slicedName = props.name.slice(0,15);                          
             if (slicedName === "MurderSpawnCube") {
                 spawnPointPositions.push(props.position);
@@ -525,12 +557,11 @@
             playerData.players[0].role = "Murderer";            
             playerData.players[1].role = "Hero";            
         }
-        if (gameMode === "LastMan") {
+        if (gameMode === "LastMan" || gameMode === "Kill20") {
             for (var i = 0; i < playerData.players.length; i++) { 
                 playerData.players[i].role = "Hero";
                 TOTAL_BULLETS = 100;
                 playerData.players[i].bullets = TOTAL_BULLETS;
-                
             }               
         }
     }
@@ -539,7 +570,8 @@
         print("setting spawn point positions");
         for (var p = 0; p < playerData.players.length; p++) {
             var q = Math.floor(Math.random() * spawnPointPositions.length);
-            playerStartPositions[p] = spawnPointPositions [q];     
+            playerStartPositions[p] = spawnPointPositions [q];
+            //spawnPointPositions.splice(q, 1);
         }
         print("spawn point positions" + JSON.stringify(playerStartPositions));        
     }
@@ -844,7 +876,7 @@
             );      
         }
     }
-
+    
     function roleChanger(idCounter,item) {
         if (reset) {
             roleNumber = roleNumber +1;
@@ -928,14 +960,10 @@
                     if (avatarDistance > AVATAR_DISTANCE_THRESHOLD || check.indexOf(playerData.players[i].id) === -1) {
                         print("player " + playerData.players[i].name + " was too far or left domain and is removed from the game");
                         if (startPlay) {
-                            Entities.callEntityClientMethod(playerData.players[i].id,              
-                                myID, 
-                                "removePlayer",
-                                []
-                            );                            
+                            removePlayer(playerData.players[i].id);                                                 
                         }                        
                         playerData.players.splice(i,1);
-                        updateSign();
+                        updateLeftSign();
                         break;                    
                     }                    
                 }                
@@ -955,27 +983,41 @@
                 if (playerData.players[i].id !== Uuid.NULL) {
                     
                     // check who is alive, last one wins
-                    if (playerData.players[i].status === "Alive") {
-                        lastManID = playerData.players[i].id;
-                        lastManName = playerData.players[i].name;
-                        lastManRole = playerData.players[i].role;
+                    if (gameMode !== "Kill20") {
+                        if (playerData.players[i].status === "Alive") {
+                            lastManID = playerData.players[i].id;
+                            lastManName = playerData.players[i].name;
+                            lastManRole = playerData.players[i].role;
+                        }
                     }
 
                     // check if there is still a murderer
-                    if (playerData.players[i].role === "Murderer" && playerData.players[i].status === "Dead") {
-                        murdererIsKilled(playerData.players[i].name);
-                        break;
+                    if (gameMode === "MurderGame") {
+                        if (playerData.players[i].role === "Murderer" && playerData.players[i].status === "Dead") {
+                            murdererIsKilled(playerData.players[i].name);
+                            break;
+                        }
                     }
                     
                     // count Deads
-                    if (playerData.players[i].status === "Dead") {
-                        deathToll++;
+                    if (gameMode !== "Kill20") {
+                        if (playerData.players[i].status === "Dead") {
+                            deathToll++;
+                        }
                     }
 
                     // finish game if one left
-                    if ((totalPlayers - deathToll) <= 1 && startPlay) {
-                        endGame(lastManID,lastManName,lastManRole);
-                        break;
+                    if (gameMode !== "Kill20") {
+                        if ((totalPlayers - deathToll) <= 1 && startPlay) {
+                            endGame(lastManID,lastManName,lastManRole);
+                            break;
+                        }
+                    }
+
+                    if (gameMode === "Kill20") {
+                        if (playerData.players[i].score >= MAX_SCORE) {
+                            endGame(playerData.players[i].id,playerData.players[i].name.split("-")[0],playerData.players[i].role);
+                        }
                     }
 
                     // check if there any players in the game if not reset
@@ -997,14 +1039,10 @@
             {text: "THE WORLD IS SAVED!:\n" + murderName + "WAS KILLED\n" + "AND LOSES THE GAME\n" + "OTHER PLAYERS WIN\n" });
         for (var j = 0; j < playerData.players.length; j++) {            
             if (playerData.players[j].status === "Alive") {
-                Entities.callEntityClientMethod(playerData.players[j].id,              
-                    myID, 
-                    "removePlayer",
-                    []
-                );
+                removePlayer(playerData.players[j].id);       
             }           
         }
-
+        deleteExistingItems();
         isGameFinished = false;
         startPlay = false;
         playerData.players =[];                
@@ -1013,18 +1051,30 @@
 
     function endGame(winnerID,winnerName,role) {
         print("winner:"+winnerName);
-        if (role === "Hero") {          
-            Entities.editEntity(murderRightSignID,{text: "THE SOLE SURVIVOR\n" + "AND WINNER IS:\n" + winnerName});        
-        }
-        if (role === "Murderer") {          
-            Entities.editEntity(murderRightSignID,{text: "EVIL REIGNS!\n" + "MURDERER " + winnerName + "\n" + "WINS"});        
+        if (gameMode === "MurderGame") {
+            if (role === "Hero") {                        
+                Entities.editEntity(murderRightSignID,{text: "THE SOLE SURVIVOR\n" + "AND WINNER IS:\n" + winnerName});        
+            }
+            if (role === "Murderer") {          
+                Entities.editEntity(murderRightSignID,{text: "EVIL REIGNS!\n" + "MURDERER " + winnerName + "\n" + "WINS"});        
+            }
+            removePlayer(winnerID);       
         }
 
-        Entities.callEntityClientMethod(winnerID,              
-            myID, 
-            "removePlayer",
-            []
-        );       
+        if (gameMode === "LastMan") {                               
+            Entities.editEntity(murderRightSignID,{text: "THE SOLE SURVIVOR\n" + "AND WINNER IS:\n" + winnerName});
+            removePlayer(winnerID);         
+        }
+
+        if (gameMode === "Kill20") {                               
+            Entities.editEntity(murderRightSignID,{text: "THE KILL20 \n" + "WINNER IS:\n" + winnerName});  
+            print(JSON.stringify(playerData));
+            for (var k = 0; k < playerData.players.length; k++) {
+                removePlayer(playerData.players[k].id); 
+            }                
+        }        
+        
+        deleteExistingItems();
         isGameFinished = false;
         startPlay = false;
         playerData.players =[];              
@@ -1038,7 +1088,7 @@
         getItemPoints();       
         createRoles();        
         createSpawnLocations();       
-        spawnTeleports();
+        //spawnTeleports();
         if (gameMode === "MurderGame") {
             spawnClues();  
             print("ini 8");
