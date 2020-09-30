@@ -13,7 +13,9 @@
     var MAX_SCORE = 20; // for "Kill20" gameMode
     var ROLE_MESSAGE_DURATION = 1; // seconds
     var GET_READY_MESSAGE = ["Get Ready","3","2","1","GO !!"];
-    var GET_READY_DURATION = 1000; // miliseconds  
+    var GET_READY_DURATION = 1000; // miliseconds 
+    var bubbleSize = 160; 
+    var BATTLE_ROYAL_SPHERE_DIMENSION = { x: bubbleSize, y: bubbleSize, z: bubbleSize};    
     var startPlay = false;
     var isGameFinished = false;    
     //var LOCATION_ROOT_URL = "http://192.168.2.200/Murdergame/";
@@ -22,7 +24,8 @@
     var myID;      
     var myPosition;   
     var murderLeftSignID;
-    var murderRightSignID;           
+    var murderRightSignID;
+    var bubbleID;           
     var playerData = {"players": []}; 
     var playersMerged = "";     
     var spawnPointIDs = [];
@@ -34,7 +37,7 @@
     var isEquipped = false;    
     var reset;
     var roleNumber = 0;
-    var gameModes = ["MurderGame","LastMan","Kill20"];
+    var gameModes = ["MurderGame","LastMan","Kill20","BattleRoyal"];
     var gameModeCounter = 1;
     var gameMode = "MurderGame";
     var rightSign = gameMode;  
@@ -503,7 +506,8 @@
             if (name === "MurderGameTeleport") {
                 Entities.deleteEntity(entities[i]);
             }               
-        }        
+        }
+        Entities.deleteEntity(bubbleID);        
     }
 
     function resetSigns() {
@@ -557,7 +561,7 @@
             playerData.players[0].role = "Murderer";            
             playerData.players[1].role = "Hero";            
         }
-        if (gameMode === "LastMan" || gameMode === "Kill20") {
+        if (gameMode === "LastMan" || gameMode === "Kill20" || gameMode === "BattleRoyal") {
             for (var i = 0; i < playerData.players.length; i++) { 
                 playerData.players[i].role = "Hero";
                 TOTAL_BULLETS = 100;
@@ -656,6 +660,58 @@
             knifeIDs.push(knifeID);
             itemPointIDs.splice(n,1);
         }                
+    }
+
+    function setShrinkingSphere() {
+        bubbleID = Entities.addEntity({
+            type: "Model",        
+            shape: "Sphere", 
+            modelURL: LOCATION_ROOT_URL + "bubble.fbx?" + Date.now(),                     
+            name: "MurdergameBubble",                    
+            description: "",               
+            lifetime: -1,
+            //angularVelocity: { x: 0.5, y: 0.2, z: 0.3 }, 
+            angularDamping: 0,
+            color: { r: 255, g: 255, b: 255 },            
+            //alpha: 1,
+            dimensions: BATTLE_ROYAL_SPHERE_DIMENSION,                
+            dynamic: false,
+            collisionless: true,                     
+            damping: 0.2,
+            position: myPosition,               
+            userData: "{ \"grabbableKey\": { \"grabbable\": false, \"triggerable\": false } }"    
+        },"domain");
+
+        var materialID = Entities.addEntity({
+            type: "Material",
+            name: "MurdergameBubbleMaterial",            
+            materialURL: "materialData",
+            priority: 1,
+            visible: true,
+            collisionless: true,
+            parentID: bubbleID,
+            lifetime: -1,
+            materialData: JSON.stringify({
+                materialVersion: 1,
+                materials: {
+                    albedo: { r: 1, g: 1, b: 1 },
+                    albedoMap: LOCATION_ROOT_URL + "soapbubble-512.jpg",
+                    unlit: false,                                       
+                    roughness: 1,                    
+                    emissive: { r: 0.2, g: 0.2, b: 0.2 },                    
+                    opacity: 0.5,
+                    opacityMap: LOCATION_ROOT_URL + "soapbubble-512.jpg",                 
+                    materialMappingScale: { x: 2, y: 2 }
+                }
+            })
+        });               
+
+        var timer = Script.setInterval(function () {
+            bubbleSize = bubbleSize - 1;
+            Entities.editEntity(bubbleID, {            
+                dimensions: { x: bubbleSize, y: bubbleSize, z: bubbleSize }
+            });                         
+        }, 1000);
     }
 
     function spawnTeleports() {
@@ -998,6 +1054,21 @@
                             break;
                         }
                     }
+                    // check if battleRoyalPlayer is outside bubble
+                    if (gameMode === "BattleRoyal") {
+                        var avatarInfo = AvatarList.getAvatar (playerData.players[i].id);
+                        var avatarPosition = avatarInfo.position;
+                        var distanceToConsole = Vec3.distance(avatarPosition,myPosition);
+                        print(playerData.players[i].name + "bubbeleSize:" + bubbleSize);
+                        print(playerData.players[i].name + "distanceToConsoleSize:" + distanceToConsole);
+                        if (distanceToConsole > bubbleSize/2) {                            
+                            playSoundEffect(playerData.players[i].id,"die");                                     
+                            playerData.players[i].status = "Dead";                                   
+                            playerData.players[i].name = playerData.players[i].name + "(X)";                                    
+                            removePlayer(playerData.players[i].id);
+                            updateLeftSign();                            
+                        }                        
+                    }
                     
                     // count Deads
                     if (gameMode !== "Kill20") {
@@ -1023,7 +1094,8 @@
                     // check if there any players in the game if not reset
                     if (playerData.players.length === 0 && startPlay) {
                         isGameFinished = false;
-                        startPlay = false;                         
+                        startPlay = false;
+                        deleteExistingItems();                                                 
                         Entities.reloadServerScripts(myID);                    
                     }
                 }
@@ -1031,7 +1103,7 @@
             }            
         }
     }
-
+    
     function murdererIsKilled(murderName) {
         print("loser = :"+murderName); 
         print(murderName);        
@@ -1061,7 +1133,7 @@
             removePlayer(winnerID);       
         }
 
-        if (gameMode === "LastMan") {                               
+        if (gameMode === "LastMan" || gameMode === "BattleRoyal") {                               
             Entities.editEntity(murderRightSignID,{text: "THE SOLE SURVIVOR\n" + "AND WINNER IS:\n" + winnerName});
             removePlayer(winnerID);         
         }
@@ -1072,7 +1144,7 @@
             for (var k = 0; k < playerData.players.length; k++) {
                 removePlayer(playerData.players[k].id); 
             }                
-        }        
+        } 
         
         deleteExistingItems();
         isGameFinished = false;
@@ -1094,14 +1166,18 @@
             print("ini 8");
             spawnKnives();
             print("ini 9");
-        }               
+        }
+                
         telePortToArena();        
         print("ini 10");        
         Script.setTimeout(function () {           
             informPlayersOfRoles();
             print("ini 11");          
         }, 1000);
-        giveGunToHero();        
+        giveGunToHero();
+        if (gameMode === "BattleRoyal") {
+            setShrinkingSphere();           
+        }        
         startMusic();
     }
 
@@ -1109,7 +1185,7 @@
         reset = true;
         avatarChecker();
         if (startPlay) {        
-            statusChecker();
+            statusChecker();           
         }                
     }, RESET_TIME_MS);       
 
