@@ -1,7 +1,7 @@
 (function () {   
     var PLAYERS_THRESHOLD = 2;
     var PLAYERS_MAX = 10;    
-    var AVATAR_DISTANCE_THRESHOLD = 50;
+    var AVATAR_DISTANCE_THRESHOLD = 200;
     var CLUE_PICKUP_DISTANCE_THRESHOLD = 3;
     var SEARCH_RADIUS = 1000;
     var SEARCH_POSITION = { x: 0, y: 0, z: 0};
