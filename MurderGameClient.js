@@ -17,7 +17,7 @@
     var swooshSound;
     var myPosition;
     var myRotation;
-    var PICK_FILTERS = Picks.PICK_ENTITIES | Picks.PICK_AVATARS | Picks.PICK_PRECISE;
+    var PICK_FILTERS = Picks.PICK_DOMAIN_ENTITIES | Picks.PICK_AVATARS | Picks.PICK_PRECISE;
     var pickID;
     var knifePickLowID;
     var knifePickHighID;
